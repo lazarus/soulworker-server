@@ -1,4 +1,4 @@
-# soulworker-server-go
+# SoulWorker Server
 This is an outdated 'RE' of the soulworker protocol.
 
 My last edit on it was ~11/12/2018.
