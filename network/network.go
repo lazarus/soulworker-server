@@ -30,7 +30,7 @@ type Network struct {
 
 // GetPortBytes - Gets the short bytes of a port
 func GetPortBytes(port uint16) []byte {
-	return []byte{byte(port), byte((port >> 8))}
+	return []byte{byte(port), byte(port >> 8)}
 }
 
 // Connection - Connection info
@@ -124,7 +124,7 @@ func (connection Connection) readCycle(network Network) {
 			continue // Not a packet we recognize or no data to read, skip
 		}
 
-		fmt.Println(header)
+		fmt.Printf("%+v\n", header)
 
 		if header.Size > 4095 {
 			panic(fmt.Sprintf("Expected a buffer size of less than 4095, got %d.", header.Size))
@@ -159,7 +159,8 @@ func Decrypt(data []byte) (uint16, *bytes.Buffer) {
 
 	for i := 0; i < len(data); i++ {
 		byte1 := data[i]
-		var byte2 = global.KeyTable[4*int(magic)-3*(i/3)+i]
+		index := 4*int(magic)-3*(i/3)+i
+		var byte2 = global.KeyTable[index]
 		buffer.WriteByte(byte1 ^ byte2)
 	}
 

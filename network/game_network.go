@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/rand"
-	"../global"
+	"soulworker-server/global"
 )
 
 // GameNetwork - Container for the GameNetwork
@@ -48,11 +48,11 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 
 		// Server -> Client
 		// ID=0x0403, Size=22, Total=29
-		// 00000000  75 f4 6d 5b 00 00 00 00  e2 07 08 00 0a 00 16 00  |u.m[............|
-		// 00000010  18 00 15 00 01 00                                 |......|
+		// 00000000  2a 9e 1a 5d 00 00 00 00  e3 07 07 00 02 00 00 00  |*..]............|
+		// 00000010  3a 00 22 00 00 00                                 |:."...|
 		buf2 := new(bytes.Buffer)
-		buf2.Write([]byte{0x75, 0xf4, 0x6d, 0x5b, 0x00, 0x00, 0x00, 0x00, 0xE2, 0x07, 0x08, 0x00, 0x1a, 0x00, 0x16, 0x00,
-			0x18, 0x00, 0x15, 0x00, 0x01, 0x00})
+		buf2.Write([]byte{0x2a, 0x9e, 0x1a, 0x5d, 0x00, 0x00, 0x00, 0x00,  0xe3, 0x07, 0x07, 0x00, 0x02, 0x00, 0x00, 0x00,
+			0x3a, 0x00, 0x22, 0x00, 0x00, 0x00})
 
 		channel.writeQueue <- global.Packet{ID: 0x0403, Data: buf2}
 	} else if packetID == 0x0311 {
@@ -66,11 +66,9 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 		// 00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00     |...............|
 		buf := new(bytes.Buffer)
 
-		// var name_bytes []byte = []byte("Austin")
-		// buf.Write([]byte{0x01, 0x00, 0xDA, 0x1B, 0x00, uint8(len(name_bytes) * 2), 0x00})
-		// for i := 0; i < len(name_bytes); i++ {
-		// 	buf.Write([]byte{name_bytes[i], 0x00})
-		// }
+		// charName := "Austin"
+		// buf.Write([]byte{0x03, 0x37, 0x71, 0x01, 0x00})
+		// util.WriteString2(buf, charName)
 		// buf.Write([]byte{
 		// 	0x03, 0x00, 0x17, 0x05,
 		// 	0xFF, 0x08, 0xB5, 0x14, 0xE6, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* Character Level */ 55, 0x00,
@@ -98,7 +96,7 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 		// ID=0x0107, Size=14, Total=21
 		// 00000000  01 00 01 00 01 01 00 00  01 00 00 01 00 01        |..............|
 		buf2 := new(bytes.Buffer)
-		buf2.Write([]byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01})
+		buf2.Write([]byte{0x01, 0x00, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,  0x00, 0x00, 0x00, 0x01, 0x00, 0x01})
 
 		channel.writeQueue <- global.Packet{ID: 0x0107, Data: buf2}
 	} else if packetID == 0x0347 {
@@ -113,7 +111,7 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 		// 00000000  00 29 1e 00 00 00 00 00  01 00 00 00 00 00 00 00  |.)..............|
 		// 00000010  00                                                |.|
 		ucid := buffer.Next(4)
-		uuid := []byte{0xaf, 0xb7, 0x0f, 0x00}
+		uuid := []byte{0x00, 0x00, 0x00, 0x00}
 
 		// Server -> Client
 		// ID=0x0315, Size=92, Total=99
@@ -130,8 +128,8 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 		p := GetPortBytes(global.GameWorldPort) // 21111 in the packet above (0x5277), 10200 in the code
 
 		buf.Write([]byte{
-			0x02, 0x02, 0x02, 0x00, 0x7d, 0x36, 0x20, 0x00,
-			0x7d, 0x36, 0x20, 0x00, 0xCB, 0x21, 0x00, 0x00, p[0], p[1], 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x01, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x85, 0x00, 0x00, 0x03,  p[0], p[1], 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x00, 0x00,
 		})
 
@@ -139,14 +137,14 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 
 		buf.Write([]byte{uint8(len(gameWorldIP)), 0x00})
 		buf.Write([]byte(gameWorldIP))
-		buf.Write(GetPortBytes(global.GameWorldPort)) // 11022 in the packet above (0x2b0e), 10200 in the code
+		buf.Write(p) // 11022 in the packet above (0x2b0e), 10200 in the code
 		buf.Write([]byte{
-			0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			                        0xff, 0xff, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00,
 		})
 
-		channel.writeQueue <- global.Packet{ID: 0x0315, Data: buf}
+		channel.writeQueue <- global.Packet{ID: 0x0314, Data: buf}
 	} else if packetID == 0x0301 {
 		type CharacterInfo struct {
 			UUID uint32
@@ -154,99 +152,41 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 			UsernameLen uint16
 			Username    []byte
 
-			CharSelection uint8 // (1 - Haru, 2 - Erwin, 3 - Lily, 4 - Stella, 5 - Jin, 6 - Iris)
-			CharInfo2     uint8
+			CharSelection uint16 // (1 - Haru, 2 - Erwin, 3 - Lily, 4 - Stella, 5 - Jin, 6 - Iris, 7 - Chii)
+
+			UUID2 uint32
 
 			// Maybe they actually should be uint16? :S
-			HairStyle    uint8
-			UnknownByte1 uint8
+			HairStyle    uint16
+			HairColor    uint16
+			EyeColor     uint16
+			SkinColor    uint16
 
-			HairColor    uint8
-			UnknownByte2 uint8
+			Unknownuint32Set1 [6]uint32
+			UnknownByte1      byte
+			Unknownuint32Set2 [127]uint32
 
-			EyeColor     uint8
-			UnknownByte3 uint8
+			UnknownByte2		byte
+			UnknownByte3		byte
 
-			SkinColor    uint8
-			UnknownByte4 uint8
-
-			UnknownByteArray1 [20]byte
-			UnknownFloat1     uint32
-			UnknownByte5      byte
-			UnknownByteArray2 [52]byte
-
-			X                 uint32
-			UnknownByteArray3 [20]byte
-
-			Y                 uint32
-			UnknownByteArray4 [12]byte
-
-			Z                 uint32
-			UnknownByteArray5 [12]byte
-
-			UnknownByteArray6 [64]byte
-			Sin               uint32
-			Cos               uint32
-			UnknownByteArray7 [18]byte
-			CharacterSlot     byte
-			StandardOutfit    byte
-			UnknownByte7      byte // level ?
-			UnknownByte8      byte // xp ?
-			UnknownByte9      byte // rank ?
+			CharacterSlot		byte
+			StandardOutfit		byte
+			UnknownByte4		byte // level ?
+			UnknownByte5		byte // xp ?
+			UnknownByte6		byte // rank ?
 		}
-
-		/**
-			Jin everything default
-
-			&network.CharacterInfo{
-				UUID:0xffffffff,
-				UsernameLen:0x14,
-				Username:[]uint8{0x61, 0x0, 0x75, 0x0, 0x73, 0x0, 0x74, 0x0, 0x69, 0x0, 0x6e, 0x0, 0x68, 0x0, 0x31, 0x0, 0x31, 0x0, 0x35, 0x0},
-				CharSelection:0x1,
-				CharInfo2:0x0,
-				HairStyle:0x4d,
-				UnknownByte1:0x4,
-				HairColor:0x35,
-				UnknownByte2:0x8,
-				EyeColor:0xed,
-				UnknownByte3:0x13,
-				SkinColor:0x1d,
-				UnknownByte4:0xc,
-				UnknownByteArray1:[20]uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-				UnknownFloat1:0xffffffff,
-				UnknownByte5:0x0,
-				UnknownByteArray2:[52]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-				X:0xffffffff,
-				UnknownByteArray3:[20]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-				Y:0xffffffff,
-				UnknownByteArray4:[12]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-				Z:0xffffffff,
-				UnknownByteArray5:[12]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
-				UnknownByteArray6:[64]uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-				Sin:0x3f80,
-				Cos:0x3f80,
-				UnknownByteArray7:[18]uint8{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-				UnknownByte6:0x2,
-				StandardOutfit:0x6f,
-				UnknownByte7:0x0,
-				UnknownByte8:0x0,
-				UnknownByte9:0x0
-			}
-		**/
 
 		ucid1 := make([]byte, 4)
 		rand.Read(ucid1) // Generate a random ucid for now
-		ucid1[0] = 0
-		ucid1[3] = 0
 
-		// somehow this gives erwin stuff? idk
+		// somehow this gives erwin stuff? idk (SHOULD GIVE CHII NOW)
 		ucid2 := []byte{0x25, 0x28, 0xad, 0x06}
 
 		ucid3 := []byte{0x2d, 0xa9, 0x2c, 0x0d}
 
-		ucid4 := []byte{0x21, 0xab, 0x2c, 0x0d}
+		ucid4 := []byte{0x21, 0xab, 0x2c, 0x0d} // ALWAYS THE SAME (PROBABLY COORDS FOR TUTORIAL)
 
-		ucid5 := []byte{0x91, 0xa9, 0x2c, 0x0d}
+		ucid5 := []byte{0x91, 0xa9, 0x2c, 0x0d} // ALWAYS THE SAME (PROBABLY COORDS FOR TUTORIAL)
 
 		charInfo := &CharacterInfo{}
 		// prepend 01
@@ -257,99 +197,62 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 		binary.Read(buffer, binary.LittleEndian, &charInfo.Username)
 
 		binary.Read(buffer, binary.LittleEndian, &charInfo.CharSelection)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.CharInfo2)
 
 		binary.Read(buffer, binary.LittleEndian, &charInfo.HairStyle)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte1)
-
 		binary.Read(buffer, binary.LittleEndian, &charInfo.HairColor)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte2)
-
 		binary.Read(buffer, binary.LittleEndian, &charInfo.EyeColor)
+		binary.Read(buffer, binary.LittleEndian, &charInfo.SkinColor)
+
+		binary.Read(buffer, binary.LittleEndian, &charInfo.Unknownuint32Set1)
+		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte1)
+		binary.Read(buffer, binary.LittleEndian, &charInfo.Unknownuint32Set2)
+
+		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte2)
 		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte3)
 
-		binary.Read(buffer, binary.LittleEndian, &charInfo.SkinColor)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte4)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByteArray1)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownFloat1)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte5)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByteArray2)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.X)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByteArray3)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.Y)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByteArray4)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.Z)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByteArray5)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByteArray6)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.Sin)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.Cos)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByteArray7)
 		binary.Read(buffer, binary.LittleEndian, &charInfo.CharacterSlot)
 		binary.Read(buffer, binary.LittleEndian, &charInfo.StandardOutfit)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte7)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte8)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte9)
+
+		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte4)
+		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte5)
+		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte6)
 		// replace last 4 bytes with uuid
 		// append 00 00 00 00 00 00 00 00 00 00
 		charInfo.UUID = binary.LittleEndian.Uint32(ucid1)
-		charInfo.UnknownFloat1 = binary.LittleEndian.Uint32(ucid2)
-		charInfo.X = binary.LittleEndian.Uint32(ucid3)
-		charInfo.Y = binary.LittleEndian.Uint32(ucid4)
-		charInfo.Z = binary.LittleEndian.Uint32(ucid5)
+		charInfo.Unknownuint32Set1[4] = binary.LittleEndian.Uint32(ucid2)
+		charInfo.Unknownuint32Set2[12] = binary.LittleEndian.Uint32(ucid3) // X
+		charInfo.Unknownuint32Set2[18] = binary.LittleEndian.Uint32(ucid4) // Z
+		charInfo.Unknownuint32Set2[22] = binary.LittleEndian.Uint32(ucid5) // Y ?
 
 		//
 
 		buf := new(bytes.Buffer)
 		buf.Write([]byte{0x01})
-		binary.Write(buf, binary.LittleEndian, charInfo.UUID)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.UUID)
 
-		binary.Write(buf, binary.LittleEndian, charInfo.UsernameLen)
-		binary.Write(buf, binary.LittleEndian, charInfo.Username)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.UsernameLen)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.Username)
 
-		binary.Write(buf, binary.LittleEndian, charInfo.CharSelection)
-		binary.Write(buf, binary.LittleEndian, charInfo.CharInfo2)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.CharSelection)
 
-		binary.Write(buf, binary.LittleEndian, charInfo.HairStyle)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte1)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.HairStyle)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.HairColor)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.EyeColor)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.SkinColor)
 
-		binary.Write(buf, binary.LittleEndian, charInfo.HairColor)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte2)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.Unknownuint32Set1)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte1)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.Unknownuint32Set2)
 
-		binary.Write(buf, binary.LittleEndian, charInfo.EyeColor)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte3)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte2)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte3)
 
-		binary.Write(buf, binary.LittleEndian, charInfo.SkinColor)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte4)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.CharacterSlot)
 
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByteArray1)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownFloat1)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte5)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByteArray2)
-
-		binary.Write(buf, binary.LittleEndian, charInfo.X)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByteArray3)
-
-		binary.Write(buf, binary.LittleEndian, charInfo.Y)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByteArray4)
-
-		binary.Write(buf, binary.LittleEndian, charInfo.Z)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByteArray5)
-
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByteArray6)
-		binary.Write(buf, binary.LittleEndian, charInfo.Sin)
-		binary.Write(buf, binary.LittleEndian, charInfo.Cos)
-		binary.Write(buf, binary.LittleEndian, charInfo.UnknownByteArray7)
-		binary.Write(buf, binary.LittleEndian, charInfo.CharacterSlot)
-
-		binary.Write(buf, binary.LittleEndian, charInfo.UUID)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.UUID)
 		buf.Write([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
-		fmt.Printf("%#v\n", charInfo)
+		fmt.Printf("%#+v\n", charInfo)
 
 		channel.writeQueue <- global.Packet{ID: 0x0312, Data: buf}
 
