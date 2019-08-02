@@ -2,6 +2,7 @@
 My slow attempt at an 'RE' of the soulworker protocol.
 
 No database (yet). Character creation is iffy, some parts are still broken.
+
 Crashes on world join with an "invalid movie" error. (Didn't go through all the packets so some still need to be edited)
 
 How to use:
@@ -21,6 +22,7 @@ After you're done, run in cmd and launch the client:
 netsh int ip delete addr 1 KOREAN_SERVER_IP
 ```
 You can get the IP through wireshark or resource monitor or any various tool.
+
 (or potentially can just specify the IP through the command line, I forgot to test before updating this).
 
 To launch the KRSW OnStove client (+skipping Stove Authenticator):
@@ -31,7 +33,9 @@ SoulWorker.exe Live/KOREAN_SERVER_IP/10000 SkipSGAuthen:yes
 To bypass XIGNCode3, you can build the dll found [here](https://github.com/austinh115/XignCode3-bypass).
 
 To bypass the OnStove authenticator without command line arguments, you can build the dll found [here](https://github.com/austinh115/OnStove-Client).
+
 (I'm not super good at CPP or RE so it can be done better. Some of the functions don't even end up getting called which isn't what I expected)
+
 NOTE: You won't be able to login as the game client sees the auth code as invalid, will need to play around with the bypass return values until it works.
 
 Changelog:
