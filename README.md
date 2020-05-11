@@ -1,44 +1,26 @@
 # SoulWorker Server
-My slow attempt at an 'RE' of the soulworker protocol.
-
-No database (yet). Character creation is iffy, some parts are still broken.
-
-Crashes on world join with an "invalid movie" error. (Didn't go through all the packets so some still need to be edited)
+My slow attempt at an 'RE' of the SoulWorker protocol.
 
 How to use:
 
 1. Download and open in GoLand or whatever IDE (or not) you use
-2. Compile & Run
-3. Enjoy up to character creation
-
-For windows networking mitm/proxy:
-
-Before client launch, run in cmd:
-```
-netsh int ip add addr 1 KOREAN_SERVER_IP/32 st=ac sk=tr
-```
-After you're done, run in cmd and launch the client:
-```
-netsh int ip delete addr 1 KOREAN_SERVER_IP
-```
-You can get the IP through wireshark or resource monitor or any various tool.
-
-(or potentially can just specify the IP through the command line, I forgot to test before updating this).
+2. Setup the database with the provided .sql file
 
 To launch the KRSW OnStove client (+skipping Stove Authenticator):
 ```
-SoulWorker.exe Live/KOREAN_SERVER_IP/10000 SkipSGAuthen:yes
+SoulWorker.exe Live/127.0.0.1/10000 SkipSGAuthen:yes
 ```
 
 To bypass XIGNCode3, you can build the dll found [here](https://github.com/austinh115/XignCode3-bypass).
 
 To bypass the OnStove authenticator without command line arguments, you can build the dll found [here](https://github.com/austinh115/OnStove-Client).
 
-(I'm not super good at CPP or RE so it can be done better. Some of the functions don't even end up getting called which isn't what I expected)
-
-NOTE: You won't be able to login as the game client sees the auth code as invalid, will need to play around with the bypass return values until it works.
-
 Changelog:
+
+* May 11, 2020
+    * Major refactor
+    * Small database implementation
+    * Somehow made it ask for 2fa and don't know how to skip, so done for today
 
 * August 2, 2019
 	* No server sided updates, only client side discoveries.

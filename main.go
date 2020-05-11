@@ -4,35 +4,31 @@ import (
 	"bytes"
 	"time"
 
+	"encoding/hex"
+	"fmt"
+
 	"./database"
 	. "./global"
 	. "./network"
-	"encoding/hex"
-	"fmt"
+	. "./network/packets"
 )
 
 // quickDecode quickly decodes a series of encoded bytes.
 // This simulates a receive call from the server.
 // It returns a byte Buffer containing the decoded byte contents.
 func quickDecode(arr []byte) *bytes.Buffer {
-	packetID, buffer := Decrypt(arr)
-	fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", packetID, buffer.Len(), buffer.Len()+7)
-	fmt.Println(hex.Dump(buffer.Bytes()))
-	return buffer
+	raw := Decrypt(arr)
+	if packetID, _, err := UnmarshalPacket(raw); err != nil {
+		fmt.Printf("err: %s\n", err)
+	} else {
+		fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", packetID, raw.Len(), raw.Len()+5)
+		fmt.Println(hex.Dump(raw.Bytes()))
+		return raw
+	}
+	return nil
 }
 
 func main() {
-	// Testing information
-	//buf := new(bytes.Buffer)
-
-	//util.WriteString2(buf, "Name")
-	//util.WriteString(buf, "Name")
-
-	//fmt.Printf("%#+v\n", buf.Bytes())
-
-	//fmt.Println(util.ReadString2(buf))
-	//fmt.Println(util.ReadString(buf))
-
 	//packets := [][]byte{
 	//	{
 	//	},
@@ -67,12 +63,8 @@ func start() {
 
 	Log("Initializing database.")
 	database.Open()
-	fmt.Print("[Database]\tChecking connection... ")
 	if err := database.CanConnect(); err != nil {
-		fmt.Println("Could not connect: ", err)
-		return
-	} else {
-		fmt.Println("Connected!")
+		panic(err)
 	}
 
 	loginNetwork := NewLoginNetwork()

@@ -1,12 +1,13 @@
 package database
 
 import (
-	. "../network/structures"
 	"crypto/sha256"
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
+
+	. "../network/structures"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // Database wrapper class
@@ -34,16 +35,22 @@ func Open() *sql.DB {
 // CanConnect checks whether or not a database is accepting connections
 // It returns an error if not
 func CanConnect() error {
-	err := DB.Ping()
-	return err
+	fmt.Print("[Database]\tChecking connection... ")
+	if err := DB.Ping(); err != nil {
+		fmt.Println("Could not connect: ", err)
+		return err
+	} else {
+		fmt.Println("Connected!")
+	}
+	return nil
 }
 
 // VerifyLoginCredentials is used to determine whether a given username and password combination correlates to a given account
 // It returns the account id if valid and 0 if invalid
-func VerifyLoginCredentials(username string, password string) int {
+func VerifyLoginCredentials(username string, password string) uint32 {
 
 	var (
-		id int
+		id         int
 		dbUsername string
 		dbPassword string
 	)
@@ -63,11 +70,11 @@ func VerifyLoginCredentials(username string, password string) int {
 		return 0
 	}
 
-	return id
+	return uint32(id)
 }
 
 // Updates a given accountId's sessionKey in the database
-func UpdateSessionKey(accountId int, sessionKey uint64) {
+func UpdateSessionKey(accountId uint32, sessionKey uint64) {
 	stmt, err := DB.Prepare("UPDATE users SET session_key = ? WHERE id = ?")
 	if err != nil {
 		log.Fatal(err)
@@ -130,7 +137,7 @@ func InsertCharacterToDb(charInfo *CharacterInfo) int64 {
 }
 
 // Fetches the number of characters the given accountId has on the server.
-func FetchUserCharacterCount(accountId int) int {
+func FetchUserCharacterCount(accountId uint32) int {
 	var count int
 
 	err := DB.QueryRow("SELECT COUNT(id) from characters where accountId = ?", accountId).Scan(&count)

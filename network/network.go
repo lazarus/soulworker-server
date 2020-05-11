@@ -1,15 +1,16 @@
 package network
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"net"
 
-	"../global"
-	"./structures"
 	"fmt"
 	"time"
+
+	"../global"
+	. "./packets"
+	"./structures"
 )
 
 // This class provides the base interface for all networking servers
@@ -27,19 +28,14 @@ func check(err error, message string) {
 type Network struct {
 	Name        string
 	Port        uint16
-	dataHandler func(*Connection, uint16, *bytes.Buffer) int
-	Clients     map[Connection]int
-}
-
-// GetPortBytes - Gets the short bytes of a port
-func GetPortBytes(port uint16) []byte {
-	return []byte{byte(port), byte(port >> 8)}
+	dataHandler func(*Connection, PacketType, interface{}) int
+	Clients     map[*Connection]int
 }
 
 // Connection - Connection info
 type Connection struct {
 	conn          net.Conn
-	writeQueue    chan global.Packet
+	writeQueue    chan PacketResponse
 	accountId     uint32
 	characterInfo *structures.CharacterInfo
 }
@@ -53,7 +49,7 @@ func (network Network) Start() {
 	global.Log(network.Name, fmt.Sprintf("Listening on %s.", sock.Addr().String()))
 
 	connections := make(chan net.Conn)
-	network.Clients = make(map[Connection]int)
+	network.Clients = make(map[*Connection]int)
 	clientCount := 0
 
 	// Networking loop for accepting connections, handled in a separate thread
@@ -74,9 +70,9 @@ func (network Network) Start() {
 			global.Log(network.Name, fmt.Sprintf("Client connected from %s.", conn.RemoteAddr()))
 			_ = conn.SetDeadline(time.Time{})
 
-			client := Connection{
+			client := &Connection{
 				conn:       conn,
-				writeQueue: make(chan global.Packet),
+				writeQueue: make(chan PacketResponse),
 			}
 			network.Clients[client] = clientCount
 			clientCount++
@@ -96,15 +92,20 @@ func (connection Connection) writeCycle(network Network) {
 	for {
 		select {
 		case packet := <-connection.writeQueue: // Equivalent to socket select
-			if packet.Data.Len() == 0 {
-				return
+			if raw, err := MarshalPacket(packet); err != nil {
+				fmt.Println("Unable to marshal")
+				panic(err)
+			} else {
+				if raw.Len() == 0 {
+					return
+				}
+
+				fmt.Println(connection.conn.LocalAddr(), "->", connection.conn.RemoteAddr())
+				fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", binary.BigEndian.Uint16(raw.Bytes()[0:2]), raw.Len(), raw.Len()+5)
+				fmt.Println(hex.Dump(raw.Bytes()[2:]))
+
+				_, _ = connection.conn.Write(Encrypt(raw))
 			}
-
-			fmt.Println(connection.conn.LocalAddr(), "->", connection.conn.RemoteAddr())
-			fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", packet.ID, packet.Data.Len(), packet.Data.Len()+7)
-			fmt.Println(hex.Dump(packet.Data.Bytes()))
-
-			_, _ = connection.conn.Write(packet.Encrypt())
 		}
 	}
 }
@@ -152,37 +153,21 @@ func (connection Connection) readCycle(network Network) {
 			panic(fmt.Sprintf("Expected %d bytes, got %d.", header.Size-5, bytesRead))
 		}
 
-		packetID, buffer := Decrypt(packetBytes)
+		//packetID, buffer := Decrypt(packetBytes)
+		raw := Decrypt(packetBytes)
+
+		if raw.Len() == 0 {
+			continue
+		}
 
 		fmt.Println(connection.conn.RemoteAddr(), "->", connection.conn.LocalAddr())
-		fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", packetID, buffer.Len(), buffer.Len()+7)
-		fmt.Println(hex.Dump(buffer.Bytes()))
-
-		// Refer to the proper networking server to handle the data
-		network.dataHandler(&connection, packetID, buffer)
+		if packetId, packet, err := UnmarshalPacket(raw); err != nil {
+			fmt.Println(err)
+			fmt.Println("Unable to unmarshall")
+			//panic(err)
+		} else {
+			// Refer to the proper networking server to handle the data
+			network.dataHandler(&connection, PacketType(packetId), packet)
+		}
 	}
 } // sub_3D17D0
-
-// Decrypt - Decrypts packet data
-// It returns the packetId and decrypted packet data
-func Decrypt(data []byte) (uint16, *bytes.Buffer) {
-	var magic uint8 = 0x02
-
-	buffer := new(bytes.Buffer)
-
-	for i := 0; i < len(data); i++ {
-		byte1 := data[i]
-		index := 4*int(magic)-3*(i/3)+i
-		var byte2 = global.KeyTable[index]
-		buffer.WriteByte(byte1 ^ byte2)
-	}
-
-	var packetID uint16
-	err := binary.Read(buffer, binary.BigEndian, &packetID)
-	if err != nil {
-		fmt.Println("Failed to read packet id from buffer.")
-		panic(err)
-	}
-
-	return packetID, buffer
-}

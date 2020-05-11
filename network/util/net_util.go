@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"golang.org/x/sys/windows"
 	"strings"
+
+	"golang.org/x/sys/windows"
 )
 
 // ReadStringUTF8 reads a string from the buffer in UTF8 format.
@@ -62,12 +63,12 @@ func ReadStringUTF16(buffer *bytes.Buffer) string {
 func WriteStringUTF8(buffer *bytes.Buffer, string string) {
 	stringLength := uint16(len(string))
 
-	b := make([]byte, stringLength + 2)
+	b := make([]byte, stringLength+2)
 
 	binary.LittleEndian.PutUint16(b, stringLength)
 
 	for i, v := range string {
-		b[i + 2] = byte(v)
+		b[i+2] = byte(v)
 	}
 
 	buffer.Write(b)
@@ -94,14 +95,19 @@ func WriteStringUTF8NoTrailing(buffer *bytes.Buffer, string string) {
 func WriteStringUTF16(buffer *bytes.Buffer, string string) {
 	stringLength := uint16(len(string) * 2)
 
-	b := make([]byte, stringLength + 2)
+	b := make([]byte, stringLength+2)
 
 	binary.LittleEndian.PutUint16(b, stringLength)
 
 	for i, v := range string {
-		b[i*2 + 2] = byte(v)
-		b[i*2 + 2 + 1] = byte(0)
+		b[i*2+2] = byte(v)
+		b[i*2+2+1] = byte(0)
 	}
 
 	buffer.Write(b)
+}
+
+// GetPortBytes - Gets the short bytes of a port
+func GetPortBytes(port uint16) []byte {
+	return []byte{byte(port), byte(port >> 8)}
 }

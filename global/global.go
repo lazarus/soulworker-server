@@ -1,8 +1,6 @@
 package global
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 )
 
@@ -51,42 +49,4 @@ func (server Server) GetName() string {
 // GetIP - Gets the IP of a Game Server
 func (server Server) GetIP() string {
 	return server.IP
-}
-
-// Packet - Game Packet with an ID and Data
-type Packet struct {
-	ID   uint16
-	Data *bytes.Buffer
-}
-
-// Encrypt - Encodes a packet to bytes
-func (packet Packet) Encrypt() []byte {
-
-	buffer := new(bytes.Buffer)
-
-	var header struct {
-		Magic  uint16 // 0x02 0x00
-		Size   uint16 // 0xXX 0xXX
-		Sender uint8  // 0x01
-	}
-	header.Magic = 0x02
-	header.Size = uint16(packet.Data.Len() + 7) // Data + 5 byte Header + 2 byte ID
-	header.Sender = 0x01
-
-	binary.Write(buffer, binary.LittleEndian, header.Magic)
-	binary.Write(buffer, binary.LittleEndian, header.Size)
-	binary.Write(buffer, binary.LittleEndian, header.Sender)
-
-	var pac = make([]byte, packet.Data.Len()+2)
-	copy(pac[0:2], []byte{uint8(packet.ID>>8) & 0xFF, uint8(packet.ID & 0xFF)})
-	copy(pac[2:], packet.Data.Bytes())
-
-	for i := 0; i < len(pac); i++ {
-		var byte1 = pac[i]
-		var byte2 = KeyTable[4*int(header.Magic)-3*(i/3)+i]
-		// fmt.Printf("%02X ^ %02X = %02X\n", byte1, byte2, byte1 ^ byte2)
-		buffer.WriteByte(byte1 ^ byte2)
-	}
-
-	return buffer.Bytes()
 }
