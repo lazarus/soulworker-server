@@ -6,13 +6,16 @@ import (
 	"encoding/hex"
 	"net"
 
-	// "io"
-	// "log"
+	"../global"
+	"./structures"
 	"fmt"
-	"soulworker-server/global"
 	"time"
 )
 
+// This class provides the base interface for all networking servers
+
+// Check is used to check for an error, panicking if one is present.
+// If there is no error, it prints message.
 func check(err error, message string) {
 	if err != nil {
 		panic(err)
@@ -24,7 +27,7 @@ func check(err error, message string) {
 type Network struct {
 	Name        string
 	Port        uint16
-	dataHandler func(Connection, uint16, *bytes.Buffer) int
+	dataHandler func(*Connection, uint16, *bytes.Buffer) int
 	Clients     map[Connection]int
 }
 
@@ -35,8 +38,10 @@ func GetPortBytes(port uint16) []byte {
 
 // Connection - Connection info
 type Connection struct {
-	conn       net.Conn
-	writeQueue chan global.Packet
+	conn          net.Conn
+	writeQueue    chan global.Packet
+	accountId     uint32
+	characterInfo *structures.CharacterInfo
 }
 
 // Start - Starts the network
@@ -51,6 +56,7 @@ func (network Network) Start() {
 	network.Clients = make(map[Connection]int)
 	clientCount := 0
 
+	// Networking loop for accepting connections, handled in a separate thread
 	go func() {
 		for {
 			conn, err := sock.Accept()
@@ -61,11 +67,12 @@ func (network Network) Start() {
 		}
 	}()
 
+	// Main networking loop for handling connections and setting up their listen loop
 	for {
 		select {
 		case conn := <-connections:
 			global.Log(network.Name, fmt.Sprintf("Client connected from %s.", conn.RemoteAddr()))
-			conn.SetDeadline(time.Time{})
+			_ = conn.SetDeadline(time.Time{})
 
 			client := Connection{
 				conn:       conn,
@@ -78,15 +85,17 @@ func (network Network) Start() {
 	}
 }
 
+// Helper function to initiate the read and write loops for a given network connection
 func (connection Connection) listen(network Network) {
 	go connection.writeCycle(network)
 	go connection.readCycle(network)
 }
 
+// Write cycle for a given network connection
 func (connection Connection) writeCycle(network Network) {
 	for {
 		select {
-		case packet := <-connection.writeQueue:
+		case packet := <-connection.writeQueue: // Equivalent to socket select
 			if packet.Data.Len() == 0 {
 				return
 			}
@@ -95,29 +104,31 @@ func (connection Connection) writeCycle(network Network) {
 			fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", packet.ID, packet.Data.Len(), packet.Data.Len()+7)
 			fmt.Println(hex.Dump(packet.Data.Bytes()))
 
-			connection.conn.Write(packet.Encrypt())
+			_, _ = connection.conn.Write(packet.Encrypt())
 		}
 	}
 }
 
+// Read cycle for a given network connection
 func (connection Connection) readCycle(network Network) {
-	defer func() {
+	defer func() { // Gets called on panic(), a quick and easy catch all clause to close a connection if it errors
 		if r := recover(); r != nil {
 			fmt.Println("Client disconnected:", r)
-			connection.conn.Close()
+			_ = connection.conn.Close()
 		}
 	}()
 	if len(global.KeyTable) < 1 {
 		panic("Key table has not been initialized.")
 	}
 	for {
+		// Packet header structure
 		var header struct {
 			Magic  uint16 // 0x02 0x00
 			Size   uint16 // 0xXX 0xXX
 			Sender uint8  // 0x01
 		}
 		// Read 5 byte header into struct
-		binary.Read(connection.conn, binary.LittleEndian, &header)
+		_ = binary.Read(connection.conn, binary.LittleEndian, &header)
 
 		if header.Magic != 2 {
 			// panic(fmt.Sprintf("Expected a magic of 2, got %d.", header.Magic))
@@ -147,11 +158,13 @@ func (connection Connection) readCycle(network Network) {
 		fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", packetID, buffer.Len(), buffer.Len()+7)
 		fmt.Println(hex.Dump(buffer.Bytes()))
 
-		network.dataHandler(connection, packetID, buffer)
+		// Refer to the proper networking server to handle the data
+		network.dataHandler(&connection, packetID, buffer)
 	}
 } // sub_3D17D0
 
 // Decrypt - Decrypts packet data
+// It returns the packetId and decrypted packet data
 func Decrypt(data []byte) (uint16, *bytes.Buffer) {
 	var magic uint8 = 0x02
 

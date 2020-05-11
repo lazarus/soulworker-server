@@ -1,14 +1,17 @@
 package network
 
 import (
+	"../database"
+	"../global"
+	"./util"
 	"bytes"
+	"encoding/binary"
 	"fmt"
-	"soulworker-server/global"
-	"soulworker-server/network/util"
-
-	// "fmt"
-
+	"log"
+	"math/rand"
 )
+
+// This file contains the contents for the Login Network
 
 // LoginNetwork - Container for the LoginNetwork
 type LoginNetwork struct {
@@ -27,8 +30,9 @@ func NewLoginNetwork() *LoginNetwork {
 	return network
 }
 
-// process - Processes data from the network
-func (network *LoginNetwork) process(channel Connection, packetID uint16, buffer *bytes.Buffer) int {
+// process - Processes data from the network from the given connection, with the given packetId and packet buffer contents
+// It returns an abstract integer value
+func (network *LoginNetwork) process(channel *Connection, packetID uint16, buffer *bytes.Buffer) int {
 	if buffer.Len() == 0 {
 		return 0
 	}
@@ -38,7 +42,7 @@ func (network *LoginNetwork) process(channel Connection, packetID uint16, buffer
 		// Client -> Server
 		// ID=0x2002, Size=4, Total=11
 		// 00000000  00 00 00 00                                       |....|
-	} else if packetID == 0x0201 {
+	} else if packetID == 0x0201 /* KR */ || packetID == 0x0218 /* GF */ { // Login Auth Request
 		// Login auth request (KRSW)
 		// Client -> Server
 		// ID=0x0201, Size=78, Total=85
@@ -48,15 +52,35 @@ func (network *LoginNetwork) process(channel Connection, packetID uint16, buffer
 		// 00000030  58 00 2d 00 58 00 58 00  2d 00 58 00 58 00 2d 00  |X.-.X.X.-.X.X.-.|
 		// 00000040  58 00 58 00 2d 00 58 00  58 00 83 96 98 00        |X.X.-.X.X.....|
 
-		username := util.ReadString2(buffer)
-		password := util.ReadString2(buffer)
-		mac := util.ReadString2(buffer)
+		username := util.ReadStringUTF16(buffer)
+		var password string
+		var mac string
+		if packetID == 0x0201 {
+			password = util.ReadStringUTF16(buffer)
+			mac = util.ReadStringUTF16(buffer)
+		} else {
+			mac = util.ReadStringUTF8(buffer)
+		}
 
 		leftover := buffer.Next(4)
 
+		// Valid credentials => austin:coolman83
 		fmt.Printf("[+] Received Login Request:\n\tUsername: %s\n\tPassword: %s\n\tMac Address: %s\n\tLeftovers: %+#v\n\n", username, password, mac, leftover)
 
 		// Query db for username:password combo and if successful, continue
+		if database.CanConnect() != nil {
+			log.Println("[!] Could not connect to the database")
+			return 0
+		}
+
+		accountId := database.VerifyLoginCredentials(username, password)
+
+		errorCode := 0
+		if accountId == 0 {
+			errorCode = 1
+		}
+
+		channel.accountId = uint32(accountId)
 
 		// Login auth response
 		// 00000000  a2 c9 00 00 01 58 58 2d  58 58 2d 58 58 2d 58 58  |.....58-58-58-58|
@@ -64,15 +88,42 @@ func (network *LoginNetwork) process(channel Connection, packetID uint16, buffer
 		// 00000020  58 00 58 00 58 00 58 00  58 00 58 00 58 00 53 9f  |X.X.X.X.X.X.X.S.|
 		// 00000030  2a 00 00 00 00 00 00 00  00 00 00 00              |*...........|
 		loginRes := new(bytes.Buffer)
-		loginRes.Write([]byte{0xa2, 0xc9, 0x00, 0x00, 0x01})
-		util.WriteString(loginRes, mac)
-		loginRes.Write([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})
-
-		util.WriteString2(loginRes, username)
-
-		loginRes.Write([]byte{0x53, 0x9f, 0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+		_ = binary.Write(loginRes, binary.LittleEndian, uint32(accountId)) // 4 bytes
+		_ = binary.Write(loginRes, binary.LittleEndian, byte(1)) // 0x01
+		util.WriteStringUTF8NoLength(loginRes, mac)
+		util.WriteStringUTF16(loginRes, "") // errorMessage
+		_ = binary.Write(loginRes, binary.LittleEndian, uint32(errorCode)) // 1 if bad login, 0 otherwise
+		_ = binary.Write(loginRes, binary.LittleEndian, byte(0)) // Unknown
+		util.WriteStringUTF16(loginRes, "") // unknown
+		if accountId > 0 { // Session Key to keep track of a user between servers
+			sessionKey := uint64(rand.Uint32())<<32 + uint64(rand.Uint32())
+			database.UpdateSessionKey(accountId, sessionKey)
+			fmt.Println("Updating session key for id", accountId,":", sessionKey)
+			_ = binary.Write(loginRes, binary.LittleEndian, sessionKey)
+		} else {
+			_ = binary.Write(loginRes, binary.LittleEndian, uint64(0))
+		}
+		_ = binary.Write(loginRes, binary.LittleEndian, byte(0)) // Unknown
+		_ = binary.Write(loginRes, binary.LittleEndian, uint16(0)) // Unknown
+		_ = binary.Write(loginRes, binary.LittleEndian, byte(0)) // Unknown
+		_ = binary.Write(loginRes, binary.LittleEndian, byte(0)) // Unknown
+		_ = binary.Write(loginRes, binary.LittleEndian, byte(0)) // Unknown
 
 		channel.writeQueue <- global.Packet{ID: 0x0202, Data: loginRes}
+
+		if accountId == 0 {
+			return 0
+		}
+
+		// Server Options
+		//serverOptions := new(bytes.Buffer)
+		//serverOptions.Write(make([]byte, 64)) // 64 bytes of zero
+		//for i := 0; i < 14; i++ {
+		//	serverOptions.Write([]byte{0, 0})
+		//}
+
+		//channel.writeQueue <- global.Packet{ID: 0x0231, Data: serverOptions}
+
 
 	} else if packetID == 0x0203 {
 		// Server list request, 0xaf 0xb7 0x0f 0x00 seems like an identifier, appears later
@@ -99,9 +150,9 @@ func (network *LoginNetwork) process(channel Connection, packetID uint16, buffer
 			serverList.Write(
 				[]byte{
 					0x01, 0x00, 0x00, 0x00,
-					0x00, 0x00, /* Number of people on the server, little endian */
+					0x00, 0x00, /* Number of people on the server, little endian, for population indicator */
 					0x00, 0x00,
-					0x00, /* Number of characters the user has on the server */
+					byte(database.FetchUserCharacterCount(int(channel.accountId))), /* Number of characters the user has on the server */
 				},
 			)
 		}

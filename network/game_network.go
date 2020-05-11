@@ -1,11 +1,15 @@
 package network
 
 import (
+	"../database"
+	"../global"
+	"./structures"
+	"./util"
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"math/rand"
-	"soulworker-server/global"
+	"github.com/davecgh/go-spew/spew"
+	"log"
 )
 
 // GameNetwork - Container for the GameNetwork
@@ -25,8 +29,9 @@ func NewGameNetwork() *GameNetwork {
 	return gameNetwork
 }
 
-// process - Processes data from the network
-func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buffer *bytes.Buffer) int {
+// process - Processes data from the network from the given connection, with the given packetId and packet buffer contents
+// It returns an abstract integer value
+func (gameNetwork *GameNetwork) process(channel *Connection, packetID uint16, buffer *bytes.Buffer) int {
 	if buffer.Len() == 0 {
 		return 0
 	}
@@ -35,14 +40,37 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 		// Client -> Server
 		// ID=0x0213, Size=15, Total=22
 		// 00000000  af b7 0f 00 02 00 28 ff  bb 00 00 00 00 00 00     |......(........|
-		uuid := buffer.Next(4)
+		var ClientEnterServerRequest struct {
+			accountId uint32
+			unknown0 uint16
+			sessionKey uint64
+			unknown1 byte
+		}
+
+		_ = binary.Read(buffer, binary.LittleEndian, &channel.accountId)
+		_ = binary.Read(buffer, binary.LittleEndian, &ClientEnterServerRequest.unknown0)
+		_ = binary.Read(buffer, binary.LittleEndian, &ClientEnterServerRequest.sessionKey)
+		_ = binary.Read(buffer, binary.LittleEndian, &ClientEnterServerRequest.unknown1)
+
+		if id := database.VerifySessionKey(channel.accountId, ClientEnterServerRequest.sessionKey); id == 0 {
+			log.Fatal("Invalid sessionKey", ClientEnterServerRequest.sessionKey, "for account", channel.accountId)
+		} else {
+			fmt.Println("Session key is okay!")
+			log.Println("session key before reconnect", ClientEnterServerRequest.sessionKey)
+		}
+
+		//spew.Dump(ClientEnterServerRequest)
+
+		//fmt.Println("HELLOacct id", channel.accountId)
+		//fmt.Printf("%#+v\n", channel)
+		//fmt.Println("sssssss")
 
 		// Server -> Client
 		// ID=0x0214, Size=5, Total=12
 		// 00000000  00 af b7 0f 00                                    |.....|
 		buf := new(bytes.Buffer)
 		buf.Write([]byte{0x00})
-		buf.Write(uuid)
+		_ = binary.Write(buf, binary.LittleEndian, ClientEnterServerRequest.accountId)
 
 		channel.writeQueue <- global.Packet{ID: 0x0214, Data: buf}
 
@@ -96,163 +124,144 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 		// ID=0x0107, Size=14, Total=21
 		// 00000000  01 00 01 00 01 01 00 00  01 00 00 01 00 01        |..............|
 		buf2 := new(bytes.Buffer)
-		buf2.Write([]byte{0x01, 0x00, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,  0x00, 0x00, 0x00, 0x01, 0x00, 0x01})
+		buf2.Write([]byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01, 0x00, 0x00})
 
 		channel.writeQueue <- global.Packet{ID: 0x0107, Data: buf2}
 	} else if packetID == 0x0347 {
 		// Nothing atm
 		// Client -> Server
 		// ID=0x0347, Size=4, Total=11
-		// 00000000  00 00 00 00                                       |....|
+		// 00000000  01 00 00 00                                       |....|
 	} else if packetID == 0x0313 {
 		// Select character
 		// Client -> Server
 		// ID=0x0313, Size=17, Total=24
-		// 00000000  00 29 1e 00 00 00 00 00  01 00 00 00 00 00 00 00  |.)..............|
-		// 00000010  00                                                |.|
-		ucid := buffer.Next(4)
-		uuid := []byte{0x00, 0x00, 0x00, 0x00}
+		//00000000  02 8f 31 00 00 00 00 00  01 00 00 00 00 00 00 00  |..1.............|
+		//00000010  00                                                |.|
+
+		var ClientSelectCharacterReq struct {
+			characterId uint32
+			unknown0 uint32
+			unknown1 byte
+			unknown2 uint32
+			unknown3 uint32
+		}
+
+		_ = binary.Read(buffer, binary.LittleEndian, &ClientSelectCharacterReq.characterId)
+		_ = binary.Read(buffer, binary.LittleEndian, &ClientSelectCharacterReq.unknown0)
+		_ = binary.Read(buffer, binary.LittleEndian, &ClientSelectCharacterReq.unknown1)
+		_ = binary.Read(buffer, binary.LittleEndian, &ClientSelectCharacterReq.unknown2)
+		_ = binary.Read(buffer, binary.LittleEndian, &ClientSelectCharacterReq.unknown3)
 
 		// Server -> Client
 		// ID=0x0315, Size=92, Total=99
-		// 00000000  00 29 1e 00 af b7 0f 00  02 02 02 00 7d 36 20 00  |.)..........}6 .|
-		// 00000010  7d 36 20 00 cb 21 00 00 >77 52<02 00 00 00 00 00  |}6 ..!..wR......|
-		// 00000020  00 00 00 00 0e 00 32 30  36 2e 32 35 33 2e 31 37  |......206.253.17|
-		// 00000030  35 2e 38 32>0e 2b<ff ff  00 00 00 00 00 00 00 00  |5.82.+..........|
-		// 00000040  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
-		// 00000050  00 00 00 00 00 00 00 00  00 00 00 00              |............|
+		//00000000  02 8f 31 00 91 d2 0e 00  02 02 02 00 45 37 20 00  |..1.........E7 .|
+		//00000010  45 37 20 00 fd 79 00 00  79 52 02 00 00 00 00 00  |E7 ..y..yR......|
+		//00000020  00 00 00 00 0e 00 32 30  36 2e 32 35 33 2e 31 37  |......206.253.17|
+		//00000030  35 2e 38 32 0e 2b ff ff  00 00 00 00 00 00 00 00  |5.82.+..........|
+		//00000040  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+		//00000050  00 00 00 00 00 00 00 00  00 00 00 00              |............|
 		buf := new(bytes.Buffer)
-		buf.Write(ucid)
-		buf.Write(uuid)
+		_ = binary.Write(buf, binary.LittleEndian, &ClientSelectCharacterReq.characterId)
+		_ = binary.Write(buf, binary.LittleEndian, &channel.accountId)
+		_ = binary.Write(buf, binary.LittleEndian, uint32(0))
+		_ = binary.Write(buf, binary.LittleEndian, uint32(0))
+		_ = binary.Write(buf, binary.LittleEndian, uint32(0))
+		_ = binary.Write(buf, binary.LittleEndian, uint32(0))
+		_ = binary.Write(buf, binary.LittleEndian, global.GameWorldPort)
+		_ = binary.Write(buf, binary.LittleEndian, make([]byte, 10))
 
-		p := GetPortBytes(global.GameWorldPort) // 21111 in the packet above (0x5277), 10200 in the code
+		util.WriteStringUTF8NoTrailing(buf, global.ServerMap[0].GetIP()) // Errors with a trailing null byte
+		_ = binary.Write(buf, binary.LittleEndian, global.GameWorldPort)
 
-		buf.Write([]byte{
-			0x01, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x85, 0x00, 0x00, 0x03,  p[0], p[1], 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00,
-		})
+		position := structures.WorldPosition{
+			MapId: 10003,
+			X: 10444.9951,
+			Y: 10179.7461,
+			Z: 100.325394,
+			Orientation: 100.0,
+		}
+		position.Write(buf)
 
-		gameWorldIP := global.ServerMap[0].GetIP()
+		_ = binary.Write(buf, binary.LittleEndian, byte(0))
 
-		buf.Write([]byte{uint8(len(gameWorldIP)), 0x00})
-		buf.Write([]byte(gameWorldIP))
-		buf.Write(p) // 11022 in the packet above (0x2b0e), 10200 in the code
-		buf.Write([]byte{
-			                        0xff, 0xff, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00,
-		})
+		_ = binary.Write(buf, binary.LittleEndian, byte(0))
+		_ = binary.Write(buf, binary.LittleEndian, byte(0))
+		_ = binary.Write(buf, binary.LittleEndian, uint32(0)) // error code?
+		_ = binary.Write(buf, binary.LittleEndian, byte(0))
+		_ = binary.Write(buf, binary.LittleEndian, uint32(0))
 
 		channel.writeQueue <- global.Packet{ID: 0x0314, Data: buf}
 	} else if packetID == 0x0301 {
-		type CharacterInfo struct {
-			UUID uint32
 
-			UsernameLen uint16
-			Username    []byte
+		charInfo := structures.CharacterInfo{}
+		charInfo.Read(buffer)
 
-			CharSelection uint16 // (1 - Haru, 2 - Erwin, 3 - Lily, 4 - Stella, 5 - Jin, 6 - Iris, 7 - Chii)
+		//fmt.Printf("%#+v\n", charInfo)
 
-			UUID2 uint32
-
-			// Maybe they actually should be uint16? :S
-			HairStyle    uint16
-			HairColor    uint16
-			EyeColor     uint16
-			SkinColor    uint16
-
-			Unknownuint32Set1 [6]uint32
-			UnknownByte1      byte
-			Unknownuint32Set2 [127]uint32
-
-			UnknownByte2		byte
-			UnknownByte3		byte
-
-			CharacterSlot		byte
-			StandardOutfit		byte
-			UnknownByte4		byte // level ?
-			UnknownByte5		byte // xp ?
-			UnknownByte6		byte // rank ?
-		}
-
-		ucid1 := make([]byte, 4)
-		rand.Read(ucid1) // Generate a random ucid for now
-
-		// somehow this gives erwin stuff? idk (SHOULD GIVE CHII NOW)
-		ucid2 := []byte{0x25, 0x28, 0xad, 0x06}
-
-		ucid3 := []byte{0x2d, 0xa9, 0x2c, 0x0d}
-
-		ucid4 := []byte{0x21, 0xab, 0x2c, 0x0d} // ALWAYS THE SAME (PROBABLY COORDS FOR TUTORIAL)
-
-		ucid5 := []byte{0x91, 0xa9, 0x2c, 0x0d} // ALWAYS THE SAME (PROBABLY COORDS FOR TUTORIAL)
-
-		charInfo := &CharacterInfo{}
-		// prepend 01
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UUID)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UsernameLen)
-		charInfo.Username = make([]byte, charInfo.UsernameLen)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.Username)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.CharSelection)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.HairStyle)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.HairColor)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.EyeColor)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.SkinColor)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.Unknownuint32Set1)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte1)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.Unknownuint32Set2)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte2)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte3)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.CharacterSlot)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.StandardOutfit)
-
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte4)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte5)
-		binary.Read(buffer, binary.LittleEndian, &charInfo.UnknownByte6)
-		// replace last 4 bytes with uuid
-		// append 00 00 00 00 00 00 00 00 00 00
-		charInfo.UUID = binary.LittleEndian.Uint32(ucid1)
-		charInfo.Unknownuint32Set1[4] = binary.LittleEndian.Uint32(ucid2)
-		charInfo.Unknownuint32Set2[12] = binary.LittleEndian.Uint32(ucid3) // X
-		charInfo.Unknownuint32Set2[18] = binary.LittleEndian.Uint32(ucid4) // Z
-		charInfo.Unknownuint32Set2[22] = binary.LittleEndian.Uint32(ucid5) // Y ?
+		//spew.Dump(charInfo)
 
 		//
 
+		//char := &structures.CharacterModel{
+		//	AccountId:  1337,
+		//	Index:      charInfo.Index,
+		//	Name:       charInfo.Username,
+		//	Class:      charInfo.CharSelection,
+		//	Level:      charInfo.Level,
+		//	Appearance: charInfo.Appearance,
+		//
+		//	MapId:      10003,
+		//	X:          10444.9951,
+		//	Y:          10179.7461,
+		//	Z:          100.325394,
+		//}
+		//
+		//
+		//charList := []structures.CharacterInfo {
+		//	{
+		//		Id:            3001,//char.Id,
+		//		Username:      char.Name,
+		//		CharSelection: char.Class,
+		//		Appearance:    char.Appearance,
+		//		Level:         char.Level,
+		//		Index:         char.Index,
+		//	},
+		//}
+
+		//fmt.Println("acc id", channel.accountId)
+		//fmt.Printf("%#+v\n", channel)
+		//fmt.Println("acc id", &channel.accountId)
+
+
+		charInfo.AccountId = channel.accountId
+		charId := database.InsertCharacterToDb(&charInfo)
+		_ /* charCount */ = byte(database.FetchUserCharacterCount(int(channel.accountId)))
+
+		charInfo.Id = uint32(charId)
+		//fmt.Println("Newly inserted character id is", charInfo.Id)
+
 		buf := new(bytes.Buffer)
-		buf.Write([]byte{0x01})
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.UUID)
+		//buf.Write([]byte{charCount}) // Character Count
+		buf.Write([]byte{1}) // Character Count
 
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.UsernameLen)
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.Username)
+		charInfo.Unknown6 = 110011301 + (1000000 * uint32(charInfo.CharSelection))
 
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.CharSelection)
+		//for _, char := range charList {
+		//	char.Write(buf)
+		//}
 
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.HairStyle)
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.HairColor)
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.EyeColor)
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.SkinColor)
 
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.Unknownuint32Set1)
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte1)
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.Unknownuint32Set2)
+		spew.Dump(charInfo.AccountId)
 
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte2)
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.UnknownByte3)
+		charInfo.Write(buf)
 
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.CharacterSlot)
-
-		_ = binary.Write(buf, binary.LittleEndian, charInfo.UUID)
-		buf.Write([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-
-		fmt.Printf("%#+v\n", charInfo)
+		_ = binary.Write(buf, binary.LittleEndian, charInfo.Id)//char.Id)
+		_ = binary.Write(buf, binary.LittleEndian, byte(0))
+		_ = binary.Write(buf, binary.LittleEndian, byte(0))
+		_ = binary.Write(buf, binary.LittleEndian, uint64(0))
+		_ = binary.Write(buf, binary.LittleEndian, byte(0))
+		_ = binary.Write(buf, binary.LittleEndian, uint64(0))
 
 		channel.writeQueue <- global.Packet{ID: 0x0312, Data: buf}
 
@@ -260,7 +269,7 @@ func (gameNetwork *GameNetwork) process(channel Connection, packetID uint16, buf
 		// ID=0x0107, Size=14, Total=21
 		// 00000000  01 00 01 00 01 01 00 00  01 00 00 01 00 01        |..............|
 		buf2 := new(bytes.Buffer)
-		buf2.Write([]byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01})
+		buf2.Write([]byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01, 0x00, 0x00})
 
 		channel.writeQueue <- global.Packet{ID: 0x0107, Data: buf2}
 	}
