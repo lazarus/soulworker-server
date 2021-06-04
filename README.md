@@ -11,9 +11,9 @@ To launch the KRSW OnStove client (+skipping Stove Authenticator):
 SoulWorker.exe Live/127.0.0.1/10000 SkipSGAuthen:yes
 ```
 
-To bypass XIGNCode3, you can build the dll found [here](https://github.com/austinh115/XignCode3-bypass).
+To bypass XIGNCode3, you can build the dll found [here](https://github.com/Lazarus/XignCode3-bypass).
 
-To bypass the OnStove authenticator without command line arguments, you can build the dll found [here](https://github.com/austinh115/OnStove-Client).
+To bypass the OnStove authenticator without command line arguments, you can build the dll found [here](https://github.com/Lazarus/OnStove-Client).
 
 Changelog:
 
