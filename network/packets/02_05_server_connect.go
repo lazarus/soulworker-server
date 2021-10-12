@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	. "../../global"
-	. "../util"
+	. "soulworker-server/network/util"
+
+	. "soulworker-server/global"
 )
 
 type ServerConnectRequest struct {

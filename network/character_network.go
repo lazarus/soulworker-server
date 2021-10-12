@@ -5,22 +5,23 @@ import (
 	"log"
 	"time"
 
-	"../database"
-	"../global"
-	. "../network/packets"
+	"soulworker-server/database"
+	"soulworker-server/global"
+	. "soulworker-server/network/packets"
+
 	"github.com/davecgh/go-spew/spew"
 )
 
-// GameNetwork - Container for the GameNetwork
-type GameNetwork struct {
+// CharacterNetwork - Container for the CharacterNetwork
+type CharacterNetwork struct {
 	Network
 }
 
-// NewGameNetwork - Creates a new GameNetwork instance
-func NewGameNetwork() *GameNetwork {
-	gameNetwork := &GameNetwork{
+// NewGameNetwork - Creates a new CharacterNetwork instance
+func NewGameNetwork() *CharacterNetwork {
+	gameNetwork := &CharacterNetwork{
 		Network{
-			Name: "Char Network",
+			Name: "Character Network",
 			Port: global.GameAuthPort,
 		},
 	}
@@ -30,7 +31,7 @@ func NewGameNetwork() *GameNetwork {
 
 // process - Processes data from the network from the given connection, with the given packetId and packet buffer contents
 // It returns an abstract integer value
-func (gameNetwork *GameNetwork) process(channel *Connection, packetID PacketType, packet interface{}) int {
+func (gameNetwork *CharacterNetwork) process(channel *Connection, packetID PacketType, packet interface{}) int {
 
 	switch packetID {
 	case Character_EnterCharServerRequest:
@@ -58,7 +59,6 @@ func (gameNetwork *GameNetwork) process(channel *Connection, packetID PacketType
 			Minute:    uint16(now.Minute()),
 			Second:    uint16(now.Second()),
 		}
-		break
 	case Character_CharacterListRequest:
 		// Fetch characters from db and pass to CharacterListResponse
 		channel.writeQueue <- &CharacterListResponse{}
@@ -71,14 +71,12 @@ func (gameNetwork *GameNetwork) process(channel *Connection, packetID PacketType
 		//
 		//channel.writeQueue <- global.Packet{ID: 0x0107, Data: buf2}
 
-		break
 	case 0x0347:
 		// Nothing atm
 		// Client -> Server
 		// ID=0x0347, Size=4, Total=11
 		// 00000000  01 00 00 00                                       |....|
 
-		break
 	case Character_SelectCharacterRequest:
 		selectCharacterRequest := packet.(*SelectCharacterRequest)
 
@@ -87,7 +85,6 @@ func (gameNetwork *GameNetwork) process(channel *Connection, packetID PacketType
 			AccountId:   channel.accountId,
 		}
 
-		break
 	case Character_CreateCharacterRequest:
 		createCharacterRequest := packet.(*CreateCharacterRequest)
 
@@ -147,7 +144,6 @@ func (gameNetwork *GameNetwork) process(channel *Connection, packetID PacketType
 		//buf2.Write([]byte{0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x01, 0x00, 0x01, 0x00, 0x00})
 		//
 		//channel.writeQueue <- global.Packet{ID: 0x0107, Data: buf2}
-		break
 	}
 
 	return 0

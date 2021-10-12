@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	. "../structures"
-	. "../util"
+	. "soulworker-server/network/structures"
+	. "soulworker-server/network/util"
 )
 
 type CharacterInfoRequest struct {
@@ -40,7 +40,7 @@ func (f *CharacterInfoResponse) id() PacketType {
 	return Game_CharacterInfoResponse
 }
 
-// Character information wrapper
+// CharacterInfoEx Character information wrapper
 type CharacterInfoEx struct {
 	Character *CharacterInfo
 	Position  WorldPosition
@@ -57,7 +57,7 @@ func (f *CharacterInfoEx) Write(buf *bytes.Buffer) {
 	_ = binary.Write(buf, binary.LittleEndian, f.Unknown1)
 }
 
-// Character information wrapper for individual characters
+// MyCharacterInfoEx Character information wrapper for individual characters
 type MyCharacterInfoEx struct {
 	CharacterInfo CharacterInfoEx
 	Unknown0      uint32
@@ -76,7 +76,7 @@ type MyCharacterInfoEx struct {
 	UnknownD      uint32
 }
 
-// Builds the struct into a byte buffer
+// Build Builds the struct into a byte buffer
 func (f *MyCharacterInfoEx) Build() *bytes.Buffer {
 	buf := new(bytes.Buffer)
 	f.CharacterInfo.Write(buf)

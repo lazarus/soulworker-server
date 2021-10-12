@@ -5,9 +5,10 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"../../database"
-	. "../../global"
-	. "../util"
+	. "soulworker-server/network/util"
+
+	"soulworker-server/database"
+	. "soulworker-server/global"
 )
 
 type ServerListRequest struct {

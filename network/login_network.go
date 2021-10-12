@@ -5,9 +5,10 @@ import (
 	"log"
 	"math/rand"
 
-	"../database"
-	"../global"
-	. "./packets"
+	. "soulworker-server/network/packets"
+
+	"soulworker-server/database"
+	"soulworker-server/global"
 )
 
 // This file contains the contents for the Login Network
@@ -73,7 +74,6 @@ func (network *LoginNetwork) process(channel *Connection, packetID PacketType, p
 			ErrorCode:  uint32(errorCode),
 			SessionKey: sessionKey,
 		}
-		break
 	case Login_ServerListRequest:
 		serverListRequest := packet.(*ServerListRequest)
 
@@ -82,14 +82,12 @@ func (network *LoginNetwork) process(channel *Connection, packetID PacketType, p
 		}
 
 		channel.writeQueue <- &ServerOptionsResponse{}
-		break
 	case Login_ServerConnectRequest:
 		serverConnectRequest := packet.(*ServerConnectRequest)
 
 		channel.writeQueue <- &ServerConnectResponse{
 			SelectedServerIP: serverConnectRequest.SelectedServerIP,
 		}
-		break
 	}
 
 	return 0

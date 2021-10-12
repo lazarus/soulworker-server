@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	. "../network/structures"
+	. "soulworker-server/network/structures"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -32,7 +33,7 @@ func Open() *sql.DB {
 	return DB
 }
 
-// CanConnect checks whether or not a database is accepting connections
+// CanConnect checks whether a database is accepting connections
 // It returns an error if not
 func CanConnect() error {
 	fmt.Print("[Database]\tChecking connection... ")
@@ -73,7 +74,7 @@ func VerifyLoginCredentials(username string, password string) uint32 {
 	return uint32(id)
 }
 
-// Updates a given accountId's sessionKey in the database
+// UpdateSessionKey Updates a given accountId's sessionKey in the database
 func UpdateSessionKey(accountId uint32, sessionKey uint64) {
 	stmt, err := DB.Prepare("UPDATE users SET session_key = ? WHERE id = ?")
 	if err != nil {
@@ -95,7 +96,7 @@ func UpdateSessionKey(accountId uint32, sessionKey uint64) {
 	log.Printf("ID = %d, affected = %d\n", lastId, rowCnt)
 }
 
-// Verifies that an accountId's sessionKey matches the one in the database
+// VerifySessionKey Verifies that an accountId's sessionKey matches the one in the database
 func VerifySessionKey(accountId uint32, sessionKey uint64) int {
 
 	var id int
@@ -110,7 +111,7 @@ func VerifySessionKey(accountId uint32, sessionKey uint64) int {
 	return id
 }
 
-// Inserts an entry for the character table into the database from the contents of the CharacterInfo struct
+// InsertCharacterToDb Inserts an entry for the character table into the database from the contents of the CharacterInfo struct
 func InsertCharacterToDb(charInfo *CharacterInfo) int64 {
 
 	stmt, err := DB.Prepare("INSERT INTO characters(accountId, `index`, name, class, appearance, level) VALUES(?, ?, ?, ?, ?, ?)")
@@ -136,7 +137,7 @@ func InsertCharacterToDb(charInfo *CharacterInfo) int64 {
 	return lastId
 }
 
-// Fetches the number of characters the given accountId has on the server.
+// FetchUserCharacterCount Fetches the number of characters the given accountId has on the server.
 func FetchUserCharacterCount(accountId uint32) int {
 	var count int
 
@@ -149,7 +150,7 @@ func FetchUserCharacterCount(accountId uint32) int {
 	return count
 }
 
-// Fetches the user character with the given characterId on the given accountId.
+// FetchUserCharacter Fetches the user character with the given characterId on the given accountId.
 func FetchUserCharacter(accountId uint32, characterId uint32) (CharacterInfo, error) {
 
 	char := CharacterInfo{}
@@ -163,7 +164,7 @@ func FetchUserCharacter(accountId uint32, characterId uint32) (CharacterInfo, er
 	return char, nil
 }
 
-// Fetches the user character with the given characterId.
+// FetchUserCharacterByCharacterId Fetches the user character with the given characterId.
 func FetchUserCharacterByCharacterId(characterId uint32) (CharacterInfo, error) {
 
 	char := CharacterInfo{}

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	. "../structures"
+	. "soulworker-server/network/structures"
 )
 
 type EnterGameServerRequest struct {

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	. "../../global"
-	"../structures"
-	"../util"
+	"soulworker-server/network/structures"
+	"soulworker-server/network/util"
+
+	. "soulworker-server/global"
 )
 
 type SelectCharacterRequest struct {

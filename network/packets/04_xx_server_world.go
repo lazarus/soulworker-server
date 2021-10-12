@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 )
 
-// send server world date
+// ServerWorldCurDate send server world date
 type ServerWorldCurDate struct {
 	Timestamp uint64
 	Year      uint16
@@ -35,7 +35,7 @@ func (f *ServerWorldCurDate) id() PacketType {
 	return Server_WorldCurrentDate
 }
 
-// send server world version
+// ServerWorldVersion send server world version
 type ServerWorldVersion struct {
 	Unknown  uint32
 	Unknown2 uint32 // 1

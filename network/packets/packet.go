@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	. "../../global"
+	. "soulworker-server/global"
 )
 
 type PacketRequest interface {

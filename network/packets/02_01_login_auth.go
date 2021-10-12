@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"../util"
+	"soulworker-server/network/util"
 )
 
 type LoginAuthRequest struct {

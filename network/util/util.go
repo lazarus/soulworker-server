@@ -78,14 +78,14 @@ func WriteStringUTF8(buffer *bytes.Buffer, string string) {
 	}
 }
 
-// WriteStringUTF8 writes a string to the buffer in UTF8 format with no length bytes at the beginning
+// WriteStringUTF8NoLength writes a string to the buffer in UTF8 format with no length bytes at the beginning
 // It's only used to write the mac address as of now
 func WriteStringUTF8NoLength(buffer *bytes.Buffer, string string) {
 	buffer.Write([]byte(string))
 	buffer.Write([]byte{0x00})
 }
 
-// WriteStringUTF8 writes a string to the buffer in UTF8 format with no training null byte
+// WriteStringUTF8NoTrailing writes a string to the buffer in UTF8 format with no training null byte
 func WriteStringUTF8NoTrailing(buffer *bytes.Buffer, string string) {
 	_ = binary.Write(buffer, binary.LittleEndian, uint16(len(string)))
 	buffer.Write([]byte(string))

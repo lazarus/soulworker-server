@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 )
 
-// Object world position struct
+// WorldPosition Object world position struct
 type WorldPosition struct {
 	MapId       uint16
 	Unknown8    uint64

@@ -3,26 +3,21 @@ package network
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"io/ioutil"
 	"net"
+
+	"github.com/davecgh/go-spew/spew"
 
 	"fmt"
 	"time"
 
-	"../global"
-	. "./packets"
-	"./structures"
+	. "soulworker-server/network/packets"
+	"soulworker-server/network/structures"
+
+	"soulworker-server/global"
 )
 
 // This class provides the base interface for all networking servers
-
-// Check is used to check for an error, panicking if one is present.
-// If there is no error, it prints message.
-func check(err error, message string) {
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(message)
-}
 
 // Network - Network struct
 type Network struct {
@@ -57,70 +52,71 @@ func (network Network) Start() {
 		for {
 			conn, err := sock.Accept()
 			if err != nil {
-				panic(err)
+				fmt.Println("Could not connect", err.Error())
+				continue
 			}
 			connections <- conn
 		}
 	}()
 
 	// Main networking loop for handling connections and setting up their listen loop
-	for {
-		select {
-		case conn := <-connections:
-			global.Log(network.Name, fmt.Sprintf("Client connected from %s.", conn.RemoteAddr()))
-			_ = conn.SetDeadline(time.Time{})
+	for conn := range connections {
+		global.Log(network.Name, fmt.Sprintf("Client connected from %s.", conn.RemoteAddr()))
+		_ = conn.SetDeadline(time.Time{})
 
-			client := &Connection{
-				conn:       conn,
-				writeQueue: make(chan PacketResponse),
-			}
-			network.Clients[client] = clientCount
-			clientCount++
-			client.listen(network)
+		client := &Connection{
+			conn:       conn,
+			writeQueue: make(chan PacketResponse),
 		}
+		network.Clients[client] = clientCount
+		clientCount++
+		client.listen(&network)
 	}
 }
 
 // Helper function to initiate the read and write loops for a given network connection
-func (connection Connection) listen(network Network) {
-	go connection.writeCycle(network)
+func (connection *Connection) listen(network *Network) {
+	go connection.writeCycle()
 	go connection.readCycle(network)
 }
 
 // Write cycle for a given network connection
-func (connection Connection) writeCycle(network Network) {
-	for {
-		select {
-		case packet := <-connection.writeQueue: // Equivalent to socket select
-			if raw, err := MarshalPacket(packet); err != nil {
-				fmt.Println("Unable to marshal")
-				panic(err)
-			} else {
-				if raw.Len() == 0 {
-					return
-				}
-
-				fmt.Println(connection.conn.LocalAddr(), "->", connection.conn.RemoteAddr())
-				fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", binary.BigEndian.Uint16(raw.Bytes()[0:2]), raw.Len(), raw.Len()+5)
-				fmt.Println(hex.Dump(raw.Bytes()[2:]))
-
-				_, _ = connection.conn.Write(Encrypt(raw))
-			}
-		}
-	}
-}
-
-// Read cycle for a given network connection
-func (connection Connection) readCycle(network Network) {
+func (connection *Connection) writeCycle() {
 	defer func() { // Gets called on panic(), a quick and easy catch all clause to close a connection if it errors
 		if r := recover(); r != nil {
 			fmt.Println("Client disconnected:", r)
 			_ = connection.conn.Close()
 		}
 	}()
-	if len(global.KeyTable) < 1 {
-		panic("Key table has not been initialized.")
+	for packet := range connection.writeQueue { // Equivalent to socket select
+		if raw, err := MarshalPacket(packet); err != nil {
+			fmt.Println("Unable to marshal")
+			panic(err)
+		} else {
+			if raw.Len() == 0 {
+				panic("no data to send")
+			}
+
+			fmt.Println(connection.conn.LocalAddr(), "->", connection.conn.RemoteAddr())
+			fmt.Printf("ID=0x%04X, Size=%d, Total=%d\n", binary.BigEndian.Uint16(raw.Bytes()[0:2]), raw.Len(), raw.Len()+5)
+			fmt.Println(hex.Dump(raw.Bytes()[2:]))
+
+			_, err = connection.conn.Write(Encrypt(raw))
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
+}
+
+// Read cycle for a given network connection
+func (connection *Connection) readCycle(network *Network) {
+	defer func() { // Gets called on panic(), a quick and easy catch all clause to close a connection if it errors
+		if r := recover(); r != nil {
+			fmt.Println("Client disconnected:", r)
+			_ = connection.conn.Close()
+		}
+	}()
 	for {
 		// Packet header structure
 		var header struct {
@@ -128,12 +124,16 @@ func (connection Connection) readCycle(network Network) {
 			Size   uint16 // 0xXX 0xXX
 			Sender uint8  // 0x01
 		}
+
+		res, _ := ioutil.ReadAll(connection.conn)
+		spew.Dump(res)
+
 		// Read 5 byte header into struct
 		_ = binary.Read(connection.conn, binary.LittleEndian, &header)
 
 		if header.Magic != 2 {
-			// panic(fmt.Sprintf("Expected a magic of 2, got %d.", header.Magic))
-			continue // Not a packet we recognize or no data to read, skip
+			panic(fmt.Sprintf("Expected a magic of 2, got %d.", header.Magic))
+			//continue // Not a packet we recognize or no data to read, skip
 		}
 
 		fmt.Printf("%+v\n", header)
@@ -154,7 +154,7 @@ func (connection Connection) readCycle(network Network) {
 		}
 
 		//packetID, buffer := Decrypt(packetBytes)
-		raw := Decrypt(packetBytes)
+		raw := Decrypt(packetBytes[:bytesRead])
 
 		if raw.Len() == 0 {
 			continue
@@ -167,7 +167,7 @@ func (connection Connection) readCycle(network Network) {
 			//panic(err)
 		} else {
 			// Refer to the proper networking server to handle the data
-			network.dataHandler(&connection, PacketType(packetId), packet)
+			network.dataHandler(connection, PacketType(packetId), packet)
 		}
 	}
 } // sub_3D17D0

@@ -3,7 +3,7 @@ package packets
 import (
 	"bytes"
 
-	. "../structures"
+	. "soulworker-server/network/structures"
 )
 
 type CreateCharacterRequest struct {

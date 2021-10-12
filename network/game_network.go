@@ -4,21 +4,22 @@ import (
 	"log"
 	"time"
 
-	. "./structures"
+	. "soulworker-server/network/structures"
 
-	"../database"
-	"../global"
-	. "./packets"
+	. "soulworker-server/network/packets"
+
+	"soulworker-server/database"
+	"soulworker-server/global"
 )
 
-// GameWorld - Container for the GameWorld
-type GameWorld struct {
+// GameNetwork - Container for the GameNetwork
+type GameNetwork struct {
 	Network
 }
 
-// NewGameWorld - Creates a new GameWorld instance
-func NewGameWorld() *GameWorld {
-	gameWorld := &GameWorld{
+// NewGameWorld - Creates a new GameNetwork instance
+func NewGameWorld() *GameNetwork {
+	gameWorld := &GameNetwork{
 		Network{
 			Name: "Game Network",
 			Port: global.GameWorldPort,
@@ -30,7 +31,7 @@ func NewGameWorld() *GameWorld {
 
 // process - Processes data from the network from the given connection, with the given packetId and packet buffer contents
 // It returns an abstract integer value
-func (gameWorld *GameWorld) process(channel *Connection, packetID PacketType, packet interface{}) int {
+func (gameWorld *GameNetwork) process(channel *Connection, packetID PacketType, packet interface{}) int {
 	switch packetID {
 	case Game_EnterGameServerRequest:
 		enterGameServerRequest := packet.(*EnterGameServerRequest)
@@ -95,7 +96,6 @@ func (gameWorld *GameWorld) process(channel *Connection, packetID PacketType, pa
 		//	channel.writeQueue <- global.Packet{ID: packetID, Data: decrypted}
 		//}
 
-		break
 	case Game_CharacterInfoRequest:
 		characterInfoRequest := packet.(*CharacterInfoRequest)
 
@@ -126,7 +126,6 @@ func (gameWorld *GameWorld) process(channel *Connection, packetID PacketType, pa
 			},
 		}
 		channel.writeQueue <- &serverCharacterInfoRes
-		break
 	case 0x0105:
 		/*
 			packet := []byte{

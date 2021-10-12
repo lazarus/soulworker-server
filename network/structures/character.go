@@ -1,12 +1,13 @@
 package structures
 
 import (
-	"../util"
 	"bytes"
 	"encoding/binary"
+
+	"soulworker-server/network/util"
 )
 
-// A series of structs related to user information packet parsing
+// UnknownStructure A series of structs related to user information packet parsing
 type UnknownStructure struct {
 	Unknown1 int64
 	Unknown2 int32
@@ -17,89 +18,89 @@ type UnknownStructure struct {
 }
 
 type UnknownStructure2 struct {
-	Unknown1	uint32
-	Unknown2 	float32
-	Unknown3	byte
-	Unknown4	uint32
-	Unknown5	byte
+	Unknown1 uint32
+	Unknown2 float32
+	Unknown3 byte
+	Unknown4 uint32
+	Unknown5 byte
 }
 
-// User stats
+// Stats User stats
 type Stats struct {
-	CurrentHealth	uint32
-	MaximumHealth	uint32
-	CurrentSF		uint32
-	MaximumSF		uint32
-	Unknown1		uint32
-	Unknown2 		uint32
-	Unknown3		uint32
-	Stamina			uint32
-	Unknown4		uint32
-	Unknown5		uint32
-	MoveSpeed		float32
-	AttackSpeed		float32
+	CurrentHealth uint32
+	MaximumHealth uint32
+	CurrentSF     uint32
+	MaximumSF     uint32
+	Unknown1      uint32
+	Unknown2      uint32
+	Unknown3      uint32
+	Stamina       uint32
+	Unknown4      uint32
+	Unknown5      uint32
+	MoveSpeed     float32
+	AttackSpeed   float32
 }
 
-// Main character info struct
+// CharacterInfo Main character info struct
 type CharacterInfo struct {
-	Id           uint32
+	Id uint32
 
 	//UsernameLen  uint16
 	//Username     []byte
-	Username	 string
+	Username      string
 	CharSelection byte // (1 - Haru, 2 - Erwin, 3 - Lily, 4 - Stella, 5 - Jin, 6 - Iris, 7 - Chii)
-	Unknown0     byte
-	UUID2        uint32
+	Unknown0      byte
+	UUID2         uint32
 	// Maybe they actually should be uint16? :S
 	/*HairStyle    uint16
 	HairColor    uint16
 	EyeColor     uint16
 	SkinColor    uint16*/
-	Appearance   uint64
-	Unknown1	 uint64
+	Appearance uint64
+	Unknown1   uint64
 
-	Level        byte
-	Unknown2     byte
-	AccountId    uint32
-	Unknown3 	 byte
-	Unknown4	 uint32
-	Unknown5 	 byte
-	Unknown6	 uint32
-	Unknown7 	 byte
-	Unknown8	 int32
+	Level     byte
+	Unknown2  byte
+	AccountId uint32
+	Unknown3  byte
+	Unknown4  uint32
+	Unknown5  byte
+	Unknown6  uint32
+	Unknown7  byte
+	Unknown8  int32
 
-	UnknownStructure	[]UnknownStructure
+	UnknownStructure []UnknownStructure
 
-	Unknown9	 uint32
-	Unknown10	 uint32
-	Unknown11	 uint32
-	Unknown12	 uint32
+	Unknown9  uint32
+	Unknown10 uint32
+	Unknown11 uint32
+	Unknown12 uint32
 	//Unknown13Len uint16
 	//Unknown13	 []byte
-	Unknown13	 string
-	Unknown14	 uint32
+	Unknown13 string
+	Unknown14 uint32
 
 	Stats
 
-	Unknown15	 byte
+	Unknown15 byte
 	//Unknown16Len uint16
 	//Unknown16	 []byte
-	Unknown16	 string
-	Energy		 uint16
-	BonusEnergy	 uint16
-	Unknown17	 uint16
-	Unknown18	 byte
-	Unknown19	 uint32
-	Unknown20	 byte
-	Unknown21 	 uint32
+	Unknown16   string
+	Energy      uint16
+	BonusEnergy uint16
+	Unknown17   uint16
+	Unknown18   byte
+	Unknown19   uint32
+	Unknown20   byte
+	Unknown21   uint32
 
-	UnknownCount byte
-	UnknownStructure2	[]UnknownStructure2
+	UnknownCount      byte
+	UnknownStructure2 []UnknownStructure2
 
-	Index		 byte
-	Unknown22	 uint32
+	Index     byte
+	Unknown22 uint32
 
-	Outfit		 uint32
+	Outfit uint32
 }
 
 // Populates the fields of a CharacterInfo object from the contents of the byte buffer
@@ -243,12 +244,12 @@ type CharacterModel struct {
 	Index      byte
 	Name       string
 	Class      byte
-	Level	   byte
+	Level      byte
 	Appearance uint64
 
-	MapId      uint16
-	X		   float32
-	Y          float32
-	Z          float32
-	O          float32
+	MapId uint16
+	X     float32
+	Y     float32
+	Z     float32
+	O     float32
 }
